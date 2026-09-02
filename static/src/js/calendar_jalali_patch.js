@@ -1,264 +1,153 @@
 /** @odoo-module **/
-console.log("JALALI CALENDAR PATCH LOADED FOR CALENDAR");
 
-import { toJalali, jMonthName, updateOrCreateElement, createDiv} from "./jalali_service";
+import { localization } from "@web/core/l10n/localization";
+import { jMonthName, updateOrCreateElement } from "./jalali_service";
 
-/* -----------------------
-   Parse tooltip date (AM/PM safe)
-------------------------*/
-function parseTooltipDate(str) {
-    if (!str) return null;
-    // Example: "03/16/2026 04:30:00 PM"
-    const parts = str.split(/\s+/);
-    if (parts.length < 2) return null;
-    
-    const [datePart, timePart, ampm] = parts;
-    if (!datePart || !timePart) return null;
-
-    const [month, day, year] = datePart.split("/").map(Number);
-    let [hour, min, sec] = timePart.split(":").map(Number);
-    if (ampm === "PM" && hour < 12) hour += 12;
-    if (ampm === "AM" && hour === 12) hour = 0;
-    return new Date(year, month - 1, day, hour, min, sec);
+function validComponents({ year, month, day } = {}) {
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return Number.isInteger(year) && Number.isInteger(month) && Number.isInteger(day) &&
+        date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
+export function parseISODate(dateString) {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateString || "");
+    if (!match) return null;
+    const components = { year: Number(match[1]), month: Number(match[2]), day: Number(match[3]) };
+    return validComponents(components) ? components : null;
+}
 
-/* -----------------------
-   Column headers
-------------------------*/
+function parseLocalizedValue(value, format) {
+    if (!value || !format || !window.luxon?.DateTime) return null;
+    const parsed = window.luxon.DateTime.fromFormat(value.trim(), format, {
+        locale: window.luxon.Settings.defaultLocale,
+        setZone: true,
+    });
+    return parsed.isValid ? { year: parsed.year, month: parsed.month, day: parsed.day } : null;
+}
+
+function normalizeDigits(value) {
+    const persian = "۰۱۲۳۴۵۶۷۸۹";
+    const arabic = "٠١٢٣٤٥٦٧٨٩";
+    return [...value].map((character) => {
+        const persianIndex = persian.indexOf(character);
+        if (persianIndex >= 0) return String(persianIndex);
+        const arabicIndex = arabic.indexOf(character);
+        return arabicIndex >= 0 ? String(arabicIndex) : character;
+    }).join("");
+}
+
+export function parseOdooFieldValue(value, isAllDay = false) {
+    return parseLocalizedValue(value, isAllDay ? localization.dateFormat : localization.dateTimeFormat);
+}
+
+function jalaliForComponents(components) {
+    if (!validComponents(components) || !window.jalali?.toJalaali) return null;
+    return window.jalali.toJalaali(components.year, components.month, components.day);
+}
+
+function numericJalali(components, includeYear = true) {
+    const jalali = jalaliForComponents(components);
+    if (!jalali) return null;
+    return includeYear ? `${jalali.jy}/${jalali.jm}/${jalali.jd}` : `${jalali.jm}/${jalali.jd}`;
+}
+
+function namedJalali(components) {
+    const jalali = jalaliForComponents(components);
+    return jalali ? `${jalali.jd} ${jMonthName(jalali.jm)} ${jalali.jy}` : null;
+}
+
 export function injectColumnHeaders(el) {
-
     if (!el) return;
-
-    el.querySelectorAll(".fc-col-header-cell-cushion").forEach(header => {
-        const dateStr = header.closest("th")?.dataset.date;
-        if (!dateStr) return;
-        const jText = toJalali(new Date(dateStr));
-        if (!jText || !jText.jy) return;
-        updateOrCreateElement(header, "jalali-date-header", `${jText.jy}/${jText.jm}/${jText.jd}`, {
-            fontSize: "11px",
-            color: "#888",
-            marginTop: "2px"
-        });
+    el.querySelectorAll(".fc-col-header-cell-cushion").forEach((header) => {
+        const text = numericJalali(parseISODate(header.closest("th")?.dataset.date));
+        if (text) updateOrCreateElement(header, "jalali-date-header", text, { fontSize: "11px", color: "#888", marginTop: "2px" });
     });
 }
 
-/* -----------------------
-   Day numbers
-------------------------*/
 export function injectDayNumbers(el) {
-
     if (!el) return;
-
-    el.querySelectorAll(".fc-daygrid-day-number").forEach(dayEl => {
-        if (dayEl.nextElementSibling?.classList.contains("jalali-day")) return;
-        const dateStr = dayEl.closest("td")?.dataset.date;
-        if (!dateStr) return;
-        const [year, month, day] = dateStr.split("-").map(Number);
-        const j = toJalali(new Date(year, month - 1, day));
-        const jdEl = document.createElement("div");
-        jdEl.className = "jalali-day";
-        jdEl.style.fontSize = "10px";
-        jdEl.style.color = "#999";
-        jdEl.style.marginTop = "2px";
-        jdEl.innerText = `${j.jm}/${j.jd}`;
-        dayEl.insertAdjacentElement("afterend", jdEl);
+    el.querySelectorAll(".fc-daygrid-day-number").forEach((dayEl) => {
+        const text = numericJalali(parseISODate(dayEl.closest("td")?.dataset.date), false);
+        if (text) updateOrCreateElement(dayEl.closest("td"), "jalali-day", text, { fontSize: "10px", color: "#999", marginTop: "2px" });
     });
 }
 
-/* -----------------------
-   Sidebar header/days
-------------------------*/
+function parsePickerMonth(text) {
+    return parseLocalizedValue(text, "LLLL yyyy");
+}
+
+function ownText(element) {
+    return [...element.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join("")
+        .trim();
+}
+
 export function injectSidebar(el) {
-
     if (!el) return;
-    
     const header = el.querySelector(".o_header_part");
-    if (!header) return;
-
-    const text = header.innerText.trim();
-    const parts = text.split(" ");
-    if (parts.length !== 2) return;
-
-    const monthMap = {
-        January:0, February:1, March:2, April:3,
-        May:4, June:5, July:6, August:7,
-        September:8, October:9, November:10, December:11
-    };
-
-    const gm = monthMap[parts[0]];
-    const gy = parseInt(parts[1]);
-    if (gm === undefined || isNaN(gy)) return;
-
-    // Header Jalali
+    const month = header && parsePickerMonth(ownText(header));
+    if (!header || !month) return;
     const selected = el.querySelector(".o_date_item_cell.o_selected");
-    let headerJalaliText;
-    if (selected) {
-        const gd = parseInt(selected.querySelector("div")?.innerText);
-        if (!gd) return;
-        const date = new Date(gy, gm, gd);
-        const j = toJalali(date);
-        headerJalaliText = `${j.jy}/${j.jm}/${j.jd}`;
-    } else {
-        const date = new Date(gy, gm, 1);
-        const j = toJalali(date);
-        headerJalaliText = `${j.jy}/${j.jm}`;
-    }
+    const selectedDay = Number(selected?.querySelector("div")?.innerText);
+    const headerText = numericJalali(selectedDay ? { ...month, day: selectedDay } : { ...month, day: 1 }, Boolean(selectedDay));
+    if (headerText) updateOrCreateElement(header, "jalali-header", headerText, { fontSize: "11px", color: "#888" });
 
-    updateOrCreateElement(header, "jalali-header", headerJalaliText, {
-        fontSize: "11px",
-        color: "#888"
-    });
-
-    // Sidebar Days
-    const cells = el.querySelectorAll(".o_date_item_cell");
-    cells.forEach(cell => {
-        if (cell.querySelector(".jalali-day")) return;
-
-        const dayDiv = cell.querySelector("div");
-        if (!dayDiv) return;
-        const gd = parseInt(dayDiv.innerText);
-        if (isNaN(gd)) return;
-
-        // Determine real Gregorian month for this cell
-        let realMonth = gm;
+    el.querySelectorAll(".o_date_item_cell").forEach((cell) => {
+        const gregorianDay = Number(cell.querySelector(":scope > div")?.innerText);
+        if (!gregorianDay) return;
+        let { year, month: gregorianMonth } = month;
         if (cell.classList.contains("o_out_of_range")) {
-            // If day < 15, it belongs to next month
-            realMonth = gd < 15 ? gm + 1 : gm - 1;
+            gregorianMonth += gregorianDay < 15 ? 1 : -1;
+            if (gregorianMonth === 0) { gregorianMonth = 12; year -= 1; }
+            if (gregorianMonth === 13) { gregorianMonth = 1; year += 1; }
         }
-        let realYear = gy;
-        if (realMonth < 0) {
-            realMonth = 11;
-            realYear -= 1;
-        } else if (realMonth > 11) {
-            realMonth = 0;
-            realYear += 1;
-        }
-
-        const j = toJalali(new Date(realYear, realMonth, gd));
-        const jd = createDiv("jalali-day", j.jd, {
-            fontSize: "9px",
-            color: "#999"
-        });
-
-        cell.appendChild(jd);
+        const jalali = jalaliForComponents({ year, month: gregorianMonth, day: gregorianDay });
+        if (jalali) updateOrCreateElement(cell, "jalali-day", String(jalali.jd), { fontSize: "9px", color: "#999" });
     });
 }
 
+function parsePopoverDate(text) {
+    const value = text?.trim();
+    if (!value) return null;
+    const single = parseLocalizedValue(value, "DDD");
+    if (single) return [single];
+    const separated = value.split(" - ");
+    if (separated.length === 2) {
+        const dates = separated.map((part) => parseLocalizedValue(part, "DDD"));
+        return dates.every(Boolean) ? dates : null;
+    }
+    const compact = /^(.+\s\d+)-(\d+),\s*(\d{4})$/.exec(normalizeDigits(value));
+    if (!compact) return null;
+    const start = parseLocalizedValue(`${compact[1]}, ${compact[3]}`, "DDD");
+    const end = start && { year: start.year, month: start.month, day: Number(compact[2]) };
+    return validComponents(end) ? [start, end] : null;
+}
 
 export function injectPopoverJalali(el) {
-
     if (!el) return;
-
-
-    const spans = el.querySelectorAll(".fa-calendar + .fw-bold.ms-2");
-
-    if (!spans) return;
-
-    const monthMap = {
-        January:1, February:2, March:3, April:4,
-        May:5, June:6, July:7, August:8,
-        September:9, October:10, November:11, December:12
-    };
-
-    spans.forEach(span => {
-
-        if (span.parentElement.querySelector(".jalali-popover")) return;
-
-        const text = span.innerText.trim();
-
-        const match = text.match(/^(\w+)\s(\d+)(?:-(\d+))?,\s(\d+)$/);
-        if (!match) return;
-
-        const month = monthMap[match[1]];
-        const day1 = parseInt(match[2]);
-        const day2 = match[3] ? parseInt(match[3]) : null;
-        const year = parseInt(match[4]);
-
-        const j1 = window.jalali.toJalaali(year, month, day1);
-
-        let result;
-
-        if (day2) {
-            const j2 = window.jalali.toJalaali(year, month, day2);
-            result = `${j1.jd}-${j2.jd} ${jMonthName(j1.jm)} ${j1.jy}`;
-        } else {
-            result = `${j1.jd} ${jMonthName(j1.jm)} ${j1.jy}`;
-        }
-
-        updateOrCreateElement(span.parentElement, "jalali-popover", result, {
-            fontSize: "11px",
-            color: "#888",
-            marginTop: "2px"
-        });
-
+    el.querySelectorAll(".fa-calendar + .fw-bold.ms-2").forEach((span) => {
+        const dates = parsePopoverDate(span.innerText);
+        if (!dates) return;
+        const texts = dates.map(namedJalali);
+        if (texts.some((text) => !text)) return;
+        updateOrCreateElement(span.parentElement, "jalali-popover", texts.join(" - "), { fontSize: "11px", color: "#888", marginTop: "2px" });
     });
 }
 
-
-
-/* -----------------------
-   Update Jalali Dates
-------------------------*/
-export function updateJalaliDates(form) {
-    console.log("🚀 updateJalaliDates called");
-
-    // const form = document.querySelector(".o_form_view");
-    if (!form) {
-        console.log("❌ Form not found");
-        return;
-    }
-    
-
-    const startDiv = form.querySelector(".o_jalali_start_date");
-    const endDiv   = form.querySelector(".o_jalali_end_date");
-    if (!startDiv && !endDiv) {
-        console.log("❌ Jalali divs not found");
-        return;
-    }
-
-    // Use data-field
-    const startBtn = form.querySelector("button[data-field='start']");
-    const endBtn   = form.querySelector("button[data-field='stop']");
-    if (!startBtn || !endBtn) {
-        console.log("❌ Start/Stop buttons not found");
-        return;
-    }
-
-    /* ---------- START ---------- */
-    const startValue = startBtn.getAttribute("value");
-    console.log("🔹 Start tooltip value:", startValue);
-    const gStart = parseTooltipDate(startValue);
-    console.log("🔹 Parsed Gregorian start date:", gStart);
-
-    if (gStart && !isNaN(gStart) && startDiv) {
-        const j = toJalali(gStart);
-        const newStartText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-        if (startDiv.innerText !== newStartText) {
-            startDiv.innerText = newStartText;
-        }
-        // startDiv.innerText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-    }
-
-    /* ---------- END ---------- */
-    const endValue = endBtn.getAttribute("value");
-    console.log("🔹 End tooltip value:", endValue);
-    const gEnd = parseTooltipDate(endValue);
-    console.log("🔹 Parsed Gregorian end date:", gEnd);
-
-    if (gEnd && !isNaN(gEnd) && endDiv) {
-        const j = toJalali(gEnd);
-        const newText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-
-        if (endDiv.innerText !== newText) {
-            endDiv.innerText = newText;
-        }
-
-    }
-
-    console.log("✅ updateJalaliDates finished");
+function updateFormDate(form, fieldName, target, isAllDay) {
+    const field = form.querySelector(`button[data-field='${fieldName}']`);
+    if (!field || !target) return;
+    const text = namedJalali(parseOdooFieldValue(field.dataset.tooltip, isAllDay));
+    if (text && target.innerText !== text) target.innerText = text;
 }
 
-
-
-
+export function updateJalaliDates(form) {
+    if (!form) return;
+    const startTarget = form.querySelector(".o_jalali_start_date");
+    const stopTarget = form.querySelector(".o_jalali_end_date");
+    const allDay = Boolean(form.querySelector("button[data-field='start_date']"));
+    updateFormDate(form, allDay ? "start_date" : "start", startTarget, allDay);
+    updateFormDate(form, allDay ? "stop_date" : "stop", stopTarget, allDay);
+}
