@@ -1,18 +1,16 @@
 /** @odoo-module **/
 
-console.log("💬 Discuss Jalali Patch Loaded");
-
-import { toJalali, jMonthName, updateOrCreateElement, createDiv} from "./jalali_service";
+import { toJalali, jMonthName, createDiv} from "./jalali_service";
 
 
 /* -----------------------
    Update one span
 ------------------------*/
 function updateMailDateSpan(span) {
-    // if (span.dataset.jalaliPatched) return;
-    // span.dataset.jalaliPatched = "1";
     if (!span) return;
+    if (span.dataset.jalaliPatched) return;
     const gDateText = span.textContent.trim();
+    if (!gDateText) return;
     const gDate = new Date(gDateText);
 
     if (isNaN(gDate)) return;
@@ -21,6 +19,7 @@ function updateMailDateSpan(span) {
 
     if (j) {
         span.textContent += ` | ${j.jy}/${j.jm}/${j.jd}`;
+        span.dataset.jalaliPatched = "1";
     }
 }
 
@@ -32,9 +31,10 @@ function updateMessageDate(el) {
 
     if (!el) return;
 
-    // prevent duplicate patch
+    // Prevent duplicate patching across repeated observer passes. Only mark
+    // the element after a valid conversion, so a later render can recover
+    // from a temporarily empty or invalid title.
     if (el.dataset.jalaliPatched) return;
-    el.dataset.jalaliPatched = "1";
 
     const title = el.getAttribute("title");
     if (!title) return;
@@ -59,6 +59,7 @@ function updateMessageDate(el) {
     );
 
     el.insertAdjacentElement("afterend", div);
+    el.dataset.jalaliPatched = "1";
 }
 
 
@@ -77,4 +78,3 @@ export function updateAllMailDates(el) {
         .forEach(updateMessageDate);
 
 }
-
