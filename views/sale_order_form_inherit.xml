@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <record id="view_sale_order_form_shamsi" model="ir.ui.view">
+        <field name="name">sale.order.form.shamsi</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+
+            <!-- =============================== -->
+            <!-- Validity Date (Jalali) -->
+            <!-- =============================== -->
+            <xpath expr="//field[@name='validity_date']" position="after">
+                <field name="validity_date_shamsi"
+                       readonly="1"
+                       class="oe_inline text-muted"
+                       invisible="not validity_date"/>
+            </xpath>
+
+            <!-- =============================== -->
+            <!-- date_order (Quotation Date) -->
+            <!-- =============================== -->
+            <xpath expr="(//field[@name='date_order'])[1]" position="after">
+                <field name="date_order_shamsi"
+                       readonly="1"
+                       class="oe_inline text-muted"
+                       invisible="not date_order"/>
+            </xpath>
+
+            <!-- Add Jalali dates next to Gregorian dates -->
+            <xpath expr="(//field[@name='expected_date'])[1]" position="after">
+                <div class="o_row mt-2" invisible="not commitment_date and not expected_date">
+
+                        <div class="col-6">
+                            <field name="commitment_date_shamsi"
+                                readonly="1"
+                                class="oe_inline text-muted"
+                                invisible="not commitment_date"/>
+                        </div>
+
+                        <div class="col-6">
+                            <field name="expected_date_shamsi"
+                                readonly="1"
+                                class="oe_inline text-muted"
+                                invisible="not expected_date"/>
+                        </div>
+
+                    </div>
+
+
+            </xpath>
+
+        </field>
+    </record>
+        
+    
+
+
+</odoo>

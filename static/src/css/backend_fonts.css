@@ -1,0 +1,100 @@
+/* / ۱. تعریف فونت ایران‌سنس / */
+@font-face {
+    font-family: 'IranSans';
+    src: url('/sale_shamsi_report/static/src/fonts/IRANSans-web.woff2') format('woff2'),
+         url('/sale_shamsi_report/static/src/fonts/IRANSans-web.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* / ۲. تغییر متغیرهای اصلی سیستم اودوو ۱۹ برای کل محیط / */
+:root {
+    --o-font-family: "IranSans", "Tahoma", sans-serif !important;
+    --base-font-family: "IranSans", "Tahoma", sans-serif !important;
+    --o-input-font-family: "IranSans", sans-serif !important;
+    --o-navbar-font-family: "IranSans", sans-serif !important;
+    --font-family-sans-serif: "IranSans", sans-serif !important;
+}
+
+/* / ۳. اعمال به بدنه اصلی و تمامی اجزای داخلی / */
+body.o_web_client, 
+.o_web_client,
+.o_web_client  {
+    font-family: "IranSans", "Tahoma", sans-serif !important;
+}
+
+/* /* ۴. اصلاح بخش Chatter، پیام‌ها و نام فرستندگان / */
+.o-mail-Chatter,
+.o-mail-Chatter ,
+.o-mail-Message,
+.o-mail-Message-content,
+.o-mail-Message-body,
+.o-mail-Thread,
+.o-mail-Composer-input,
+.o-mail-Activity,
+.o-mail-Message-author,
+.o-mail-NotificationItem-name,
+.o-mail-Discuss-threadName,
+.o_Message,
+.o_Message_content {
+    font-family: "IranSans", "Tahoma", sans-serif !important;
+}
+
+/* /* ۵. اصلاح نام مخاطبان، فیلد نام افراد و عناوین کانبان / */
+.o_field_many2one_selection,
+.o_field_partner_autocomplete,
+.o_kanban_record_title,
+.o_kanban_record_subtitle,
+.o_card_title,
+.o_field_widget[name="partner_id"],
+.o_field_widget[name="name"],
+[name="display_name"],
+.o_last_breadcrumb_item,
+.o_breadcrumb .active,
+.o_field_widget .o_external_button {
+    font-family: "IranSans", "Tahoma", sans-serif !important;
+    font-weight: 500 !important;
+}
+
+/* / ۶. اصلاح منوها، دکمه‌ها، نوار ابزار و جداول / */
+.o_main_navbar,
+.o_main_navbar ,
+.o_nav_entry,
+.o_menu_sections,
+.o_menu_brand,
+.o_control_panel,
+.o_control_panel ,
+.btn,
+.dropdown-item,
+.o_field_widget,
+.o_list_table {
+    font-family: "IranSans", sans-serif !important;
+}
+
+/* / ۷. اصلاح فیلدهای ورودی و متن‌های تایپی / */
+input, 
+textarea, 
+select,
+.o_input,
+.o_field_char,
+.o_field_text,
+.o_field_html {
+    font-family: "IranSans", sans-serif !important;
+}
+
+/* / ۸. بهبود نمایش اعداد و تاریخ‌ها / */
+.o_field_number, 
+.o_datepicker_input,
+.o_field_date,
+.o_field_datetime {
+    font-family: "IranSans", sans-serif !important;
+}
+
+/* / ۹. مودال‌ها، پنجره‌های پاپ‌آپ و اعلان‌ها / */
+.modal-content,
+.modal-title,
+.modal-body,
+.o_notification_manager,
+.o_toast {
+    font-family: "IranSans", sans-serif !important;
+}

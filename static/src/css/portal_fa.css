@@ -1,0 +1,22 @@
+/* Reorder blocks only in Persian */
+html[lang^="fa"] #informations {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+html[lang^="fa"] #sale_info {
+    order: 2;
+}
+
+html[lang^="fa"] #customer_info {
+    order: 1;
+}
+
+html[lang^="fa"] #sales_order_table thead {
+    border-top: 5px double #444;
+}
+
+html[lang^="fa"] #intro_row {
+    justify-content: center;
+    text-align: center;
+}

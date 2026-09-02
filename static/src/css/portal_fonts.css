@@ -1,0 +1,19 @@
+/* Load IranSans font */
+@font-face {
+    font-family: "IranSans";
+    src: url("/sale_shamsi_report/static/src/fonts/IRANSans-web.woff2") format("woff2"),
+         url("/sale_shamsi_report/static/src/fonts/IRANSans-web.woff") format("woff");
+    font-weight: normal;
+    font-style: normal;
+}
+
+/* Apply only when page lang is Persian */
+html[lang*="fa"] body,
+html[lang*="fa"] .o_portal, 
+html[lang*="fa"] .o_website,
+html[lang*="fa"] #portal_sale_content,
+html[lang*="fa"] table,
+html[lang*="fa"] .h1, html[lang*="fa"] .h2, html[lang*="fa"] .h3, html[lang*="fa"] .h4, html[lang*="fa"] .h5, html[lang*="fa"] .h6,
+html[lang*="fa"] h1, html[lang*="fa"] h2, html[lang*="fa"] h3, html[lang*="fa"] h4, html[lang*="fa"] h5, html[lang*="fa"] h6  {
+    font-family: "IranSans", sans-serif !important;
+}

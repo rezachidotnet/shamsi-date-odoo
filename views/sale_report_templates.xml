@@ -1,0 +1,172 @@
+<odoo>
+
+
+
+
+    <template id="report_saleorder_document_shamsi" inherit_id="sale.report_saleorder_document">
+
+        
+        <!-- ایجاد صفحه خالی بعد از کاور -->
+
+        <xpath expr="//div[hasclass('page')]" position="before">
+            <!-- شروع صفحه کاور اختصاصی -->
+            <div class="custom-full-page-cover" style="
+                position: relative; 
+                height: 20cm; 
+                width: 100%; 
+                background-color: white; 
+                z-index: 9999; 
+                margin-top: -150px; / پوشاندن فضای هدر /
+                margin-bottom: 50px;
+                display: flex; 
+                flex-direction: column; 
+                justify-content: center; 
+                align-items: center; 
+                text-align: center;
+                page-break-after: always;">
+
+         
+
+                <!-- ۲. خط ۳/۴ صفحه (۷۵٪ عرض) -->
+                <div style="height: 50px;"></div>
+                <hr style="width: 75%; border-top: 3px solid #000; margin: 30px auto;"/>
+
+                <!-- ۳. محتوای وسط صفحه با فونت درشت -->
+                <div style="height: 100px;"></div>
+                <div style="font-size: 26px; line-height: 2.2; color: #000;">
+
+                    
+                    <div style="font-size: 50px; font-weight: bold; margin-bottom: 30px;">
+                        <span t-if="doc.state in ['draft','sent']">QUOTATION</span>
+                        <span t-else="">SALES ORDER</span>
+                    </div>
+
+                    <div style="height: 50px;"></div>
+                    <div style="margin-top: 10px;">
+                        <strong>Document Number: </strong> <span t-field="doc.name"/>
+                    </div>
+
+                    <div style="height: 50px;"></div>
+                    <div style="margin-top: 10px;">
+                        <strong>Customer: </strong> <span t-field="doc.partner_id.name"/>
+                    </div>
+
+                    <div style="height: 300px;"></div>
+                    <div style="margin-top: 10px;">
+                        <strong>Date: </strong> 
+                        <t t-if="doc.partner_id and doc.partner_id.lang == 'fa_IR' and 'date_order_shamsi' in doc">
+                            <span t-field="doc.date_order_shamsi"/>
+                        </t>
+                        <t t-else="">
+                            <span t-field="doc.date_order" t-options='{"widget": "date"}'/>
+                        </t>
+                    </div>
+
+                </div>
+
+                <!-- ۴. لایه سفید برای پوشاندن فوتر (در پایین کاور) -->
+                <div style="position: absolute; bottom: -100px; left: 0; right: 0; height: 200px; background: white; z-index: 10000;"></div>
+            </div>
+        </xpath>
+
+
+        
+        <!-- اضافه کردن یک خط خالی قبل از جدول قیمت-->
+        <xpath expr="//div[@id='informations']" position="before">
+            <div style="height:20px;"></div>
+        </xpath>
+
+        <xpath expr="//div[@id='informations']" position="inside">
+            <!-- اضافه کردن ستون شماره سند به انتهای بخش اطلاعات -->
+            <div t-if="doc.name" class="col" name="informations_doc_number">
+                <strong>Document No</strong>
+                <div t-field="doc.name">SO0000</div>
+            </div>
+        </xpath>
+
+        <!-- ۱. تاریخ سفارش/پیش‌فاکتور -->
+        <xpath expr="//div[@t-field='doc.date_order']" position="replace">
+            <t t-if="doc.partner_id.lang == 'fa_IR' and doc.date_order_shamsi">
+                <div t-esc="doc.date_order_shamsi"/>
+            </t>
+            <t t-else="">
+                <div t-field="doc.date_order" t-options="{'widget': 'date'}"/>
+            </t>
+        </xpath>
+
+        <!-- ۲. تاریخ اعتبار -->
+        <xpath expr="//div[@t-field='doc.validity_date']" position="replace">
+            <t t-if="doc.partner_id.lang == 'fa_IR' and doc.validity_date_shamsi">
+                <div t-esc="doc.validity_date_shamsi"/>
+            </t>
+            <t t-else="">
+                <div t-field="doc.validity_date" t-options="{'widget': 'date'}"/>
+            </t>
+        </xpath>
+
+        <!-- ۳. تاریخ تحویل -->
+        <xpath expr="//div[@t-field='doc.commitment_date']" position="replace">
+            <t t-if="doc.partner_id.lang == 'fa_IR' and doc.commitment_date_shamsi">
+                <div t-esc="doc.commitment_date_shamsi"/>
+            </t>
+            <t t-else="">
+                <div t-field="doc.commitment_date" t-options="{'widget': 'date'}"/>
+            </t>
+        </xpath>
+
+        <xpath expr="//div[@t-field='doc.partner_id']" position="before">
+            <strong class="customer_label" t-translation="on">Customer: </strong>
+        </xpath>
+
+        
+
+        
+
+        <xpath expr="//div[@name='so_total_summary']" position="after">
+            <!-- فاصله لازم برای بخش امضا -->
+            <div style="height: 10px; clear: both;"></div>
+            
+            <div class="row">
+                <div class="col-5 offset-7 text-center">
+                    
+                    <!-- استفاده از کلاس‌های تعریف شده در فایل CSS -->
+                    <span class="signature_title">Sell Department</span>
+                    
+                    <div class="user_name_style" style="border-top: 1px solid #eee; padding-top: 5px;">
+                        <span t-field="doc.user_id.name"/>
+                    </div>
+
+                    
+                    <div t-if="doc.user_id.sudo().signature" class="signature_container">
+                        <div t-out="doc.user_id.sudo().signature" />
+                    </div>
+                    
+                    <div t-else="">
+                        <p t-field="doc.user_id.name" class="user_name_style" style="border-bottom: 2px solid #000;"/>
+                    </div>
+
+                    
+                </div>
+            </div>
+        </xpath>
+
+
+    </template>
+
+    <template id="external_layout_bubble_custom"
+          inherit_id="web.external_layout_bubble">
+
+        <!-- حذف آدرس شرکت از header -->
+        <xpath expr="//div[@name='company_address']" position="replace"/>
+
+        <!-- اضافه کردن آدرس شرکت به footer -->
+        <xpath expr="//div[hasclass('border-top') and @t-field='company.report_footer']" position="replace">
+            <div class="border-top pt-2 company_footer_address">
+                <span t-field="company.company_details"/>
+            </div>
+            <div class="" t-field="company.report_footer"/>
+        </xpath>
+
+    </template>
+</odoo>
+
