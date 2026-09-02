@@ -1,8 +1,10 @@
+import ast
 from datetime import date
 
 import jdatetime
 
 from odoo.tests import TransactionCase, tagged
+from odoo.tools.misc import file_open
 
 
 @tagged("shamsi_characterization", "-standard")
@@ -24,3 +26,9 @@ class TestShamsiConversion(TransactionCase):
             with self.subTest(gregorian=gregorian):
                 actual = jdatetime.date.fromgregorian(date=gregorian).strftime("%Y/%m/%d")
                 self.assertEqual(actual, expected)
+
+    def test_manifest_declares_jdatetime_external_dependency(self):
+        with file_open("sale_shamsi_report/__manifest__.py", "r") as source:
+            manifest = ast.literal_eval(source.read())
+
+        self.assertIn("jdatetime", manifest["external_dependencies"]["python"])

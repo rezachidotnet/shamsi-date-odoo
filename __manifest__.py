@@ -6,6 +6,9 @@
      'author': 'SiPanel',
     'license': 'LGPL-3',
     'depends': ['sale', 'portal', 'website', 'sale_stock', 'mail', 'calendar'],
+    'external_dependencies': {
+        'python': ['jdatetime'],
+    },
     'data': [
         # PDF Report Customization        
         'views/sale_report_templates.xml',

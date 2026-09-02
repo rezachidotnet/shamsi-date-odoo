@@ -25,36 +25,23 @@ class SaleOrder(models.Model):
         compute='_compute_shamsi_dates'
     )
 
-    @api.depends('date_order', 'validity_date', 'commitment_date')
+    def _date_to_shamsi(self, value):
+        if not value:
+            return False
+        g_date = fields.Date.to_date(value)
+        return jdatetime.date.fromgregorian(date=g_date).strftime('%Y/%m/%d')
+
+    def _datetime_to_shamsi(self, value):
+        if not value:
+            return False
+        g_datetime = fields.Datetime.to_datetime(value)
+        local_datetime = fields.Datetime.context_timestamp(self, g_datetime)
+        return self._date_to_shamsi(local_datetime.date())
+
+    @api.depends('date_order', 'validity_date', 'commitment_date', 'expected_date')
     def _compute_shamsi_dates(self):
         for order in self:
-            # Convert date_order
-            if order.date_order:
-                g_date = fields.Date.to_date(order.date_order)
-                j_date = jdatetime.date.fromgregorian(date=g_date)
-                order.date_order_shamsi = j_date.strftime('%Y/%m/%d')
-            else:
-                order.date_order_shamsi = False
-
-            # Convert validity_date
-            if order.validity_date:
-                g_date = fields.Date.to_date(order.validity_date)
-                j_date = jdatetime.date.fromgregorian(date=g_date)
-                order.validity_date_shamsi = j_date.strftime('%Y/%m/%d')
-            else:
-                order.validity_date_shamsi = False
-
-            # Delivery Date
-            if order.commitment_date:
-                g_date = fields.Datetime.to_datetime(order.commitment_date).date()
-                j_date = jdatetime.date.fromgregorian(date=g_date)
-                order.commitment_date_shamsi = j_date.strftime('%Y/%m/%d')
-            else:
-                order.commitment_date_shamsi = False
-
-            if order.expected_date:
-                g_date = fields.Date.to_date(order.expected_date)
-                j_date = jdatetime.date.fromgregorian(date=g_date)
-                order.expected_date_shamsi = j_date.strftime('%Y/%m/%d')
-            else:
-                order.expected_date_shamsi = False
+            order.date_order_shamsi = order._datetime_to_shamsi(order.date_order)
+            order.validity_date_shamsi = order._date_to_shamsi(order.validity_date)
+            order.commitment_date_shamsi = order._datetime_to_shamsi(order.commitment_date)
+            order.expected_date_shamsi = order._datetime_to_shamsi(order.expected_date)
