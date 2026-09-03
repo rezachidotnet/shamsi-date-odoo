@@ -1,154 +1,91 @@
 /** @odoo-module **/
 
+import { parseDate, parseDateTime } from "@web/core/l10n/dates";
 import { toJalali, jMonthName, createDiv } from "./jalali_service";
 
-/**
- * Convert the schedule_date_0 button value to Jalali and append it after the button
- */
+const SCHEDULE_FIELDS = [
+    { selector: "#schedule_date_0", type: "datetime" },
+    { selector: "#date_deadline_0", type: "date" },
+    { selector: "#plan_date_0", type: "date" },
+];
+
+function normalizeDigits(value) {
+    return value
+        .replace(/[\u06F0-\u06F9]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+        .replace(/[\u0660-\u0669]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
+}
+
+function parseLocalized(value, type) {
+    if (!value || typeof value !== "string") return null;
+    try {
+        const parsed = type === "date"
+            ? parseDate(normalizeDigits(value.trim()))
+            : parseDateTime(normalizeDigits(value.trim()));
+        return parsed && parsed.isValid ? parsed : null;
+    } catch {
+        return null;
+    }
+}
+
+function updateOrRemove(container, anchor, className, date) {
+    const existing = container?.querySelector(`.${className}`);
+    if (!container || !anchor || !date) {
+        existing?.remove();
+        return;
+    }
+
+    const jalali = toJalali(date);
+    if (!jalali) {
+        existing?.remove();
+        return;
+    }
+
+    const text = `| ${jalali.jd} ${jMonthName(jalali.jm)} ${jalali.jy}`;
+    if (existing) {
+        existing.textContent = text;
+        container.querySelectorAll(`.${className}`).forEach((extra, index) => {
+            if (index > 0) extra.remove();
+        });
+        return;
+    }
+
+    const element = createDiv(className, text, {
+        fontSize: "11px",
+        color: "#888",
+        marginLeft: "6px",
+    });
+    anchor.insertAdjacentElement("afterend", element);
+}
+
+/** Add the civil Jalali date beside supported scheduling fields in modal forms. */
 export function updateMassMailingScheduleDate(modalEl) {
     if (!modalEl) return;
 
-    let btn;
-
-    if (modalEl.querySelector("#schedule_date_0")) {
-        btn = modalEl.querySelector("#schedule_date_0");
-    } else if (modalEl.querySelector("#date_deadline_0")) {
-        btn = modalEl.querySelector("#date_deadline_0");
-    } else {
-        btn = modalEl.querySelector("#plan_date_0");
-    }
-
-    
-    if (!btn) return;
-    const val = btn.value;
-    if (!val) return;
-
-    const gDate = new Date(val);
-    if (isNaN(gDate)) return;
-
-    const j = toJalali(gDate);
-    if (!j) return;
-
-    const jalaliText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-
-    // Find existing divs in the same container
-    const container = btn.parentElement;
-    if (!container) return;
-
-    let div = container.querySelector(".jalali-schedule-date");
-
-    if (div) {
-        // Update the first existing div
-        div.textContent = `| ${jalaliText}`;
-
-        // Remove any additional duplicates
-        container.querySelectorAll(".jalali-schedule-date").forEach((extraDiv, idx) => {
-            if (idx > 0) extraDiv.remove();
-        });
-
-    } else {
-        // Create if not exists
-        div = createDiv(
-            "jalali-schedule-date",
-            `| ${jalaliText}`,
-            {
-                fontSize: "11px",
-                color: "#888",
-                marginLeft: "6px",
-            }
-        );
-        btn.insertAdjacentElement("afterend", div);
-    }
+    const target = SCHEDULE_FIELDS.find(({ selector }) => modalEl.querySelector(selector));
+    const field = target ? modalEl.querySelector(target.selector) : null;
+    const container = field?.parentElement;
+    const value = field?.getAttribute("data-tooltip") || field?.value || field?.textContent;
+    const date = target ? parseLocalized(value, target.type) : null;
+    updateOrRemove(container, field, "jalali-schedule-date", date);
 }
 
+/** Add the Jalali user-timezone date beside mailing.mailing.next_departure. */
 export function updateNextDepartureToJalali(containerEl) {
     if (!containerEl) return;
 
-    const span = containerEl.querySelector("span[data-tooltip]");
-    if (!span) return;
-
-    // Prevent duplicate patch
-    if (span.dataset.jalaliPatched) return;
-    span.dataset.jalaliPatched = "1";
-
-    const tooltip = span.getAttribute("data-tooltip");
-    if (!tooltip) return;
-
-    const gDate = new Date(tooltip);
-    if (isNaN(gDate)) return;
-
-    const j = toJalali(gDate);
-    if (!j) return;
-
-    // Convert month to Persian
-    const jalaliText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-
-    // Check if a Jalali element already exists
-    const container = span.parentElement;
-    let jalaliDiv = container.querySelector(".jalali-next-departure");
-
-    if (jalaliDiv) {
-        jalaliDiv.textContent = `| ${jalaliText}`;
-    } else {
-        // Create a new span
-        jalaliDiv = createDiv(
-            "jalali-next-departure",
-            `| ${jalaliText}`,
-            {
-                fontSize: "11px",
-                color: "#888",
-                marginLeft: "6px"
-            }
-        );
-        span.insertAdjacentElement("afterend", jalaliDiv);
-    }
+    const span = containerEl.querySelector('[name="next_departure"] span[data-tooltip]');
+    const container = span?.parentElement;
+    const date = parseLocalized(span?.getAttribute("data-tooltip"), "datetime");
+    updateOrRemove(container, span, "jalali-next-departure", date);
 }
 
-
-
+/** Add the Jalali user-timezone date to mailing.mailing calendar_date list cells. */
 export function updateCalendarDateList(el) {
     if (!el) return;
 
-    let cells = el.querySelectorAll('td[name="calendar_date"]');
-
-    if (!cells.length) {
-        cells = el.querySelectorAll('td[name="create_date"]');
-    }
-
-    cells.forEach(cell => {
-
-        if (!cell.innerText) return;
-
-        // prevent duplicate patch
-        if (cell.dataset.jalaliPatched) return;
-        cell.dataset.jalaliPatched = "1";
-
-        let originalText = cell.innerText.trim();
-
-        // take only Gregorian part
-        let gText = originalText.split('|')[0].trim();
-
-        // detect if year exists
-        const hasYear = /\b\d{4}\b/.test(gText);
-
-        if (!hasYear) {
-            const currentYear = new Date().getFullYear();
-            gText = `${gText}, ${currentYear}`;
-        }
-
-        const gDate = new Date(gText);
-        if (isNaN(gDate)) return;
-
-        const j = toJalali(gDate);
-        if (!j) return;
-
-        let jalaliText;
-
-        if (!hasYear) {
-            jalaliText = `${j.jd} ${jMonthName(j.jm)}`;
-        } else {
-            jalaliText = `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
-        }
-        cell.innerText = `${jalaliText} | ${originalText.split('|')[0].trim()} `;
+    el.querySelectorAll('td[name="calendar_date"]').forEach((cell) => {
+        const source = cell.querySelector("span[data-tooltip]");
+        const date = parseLocalized(source?.getAttribute("data-tooltip"), "datetime");
+        updateOrRemove(cell, source, "jalali-calendar-date-list", date);
     });
 }
