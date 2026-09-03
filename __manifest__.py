@@ -64,6 +64,9 @@
         'sale_shamsi_report/static/src/js/patch_startup.js',
 
     ],
+    'web.assets_unit_tests': [
+        'sale_shamsi_report/static/tests/**/*.test.js',
+    ],
   
 },
 }
