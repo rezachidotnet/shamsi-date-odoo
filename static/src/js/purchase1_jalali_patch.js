@@ -1,21 +1,29 @@
 /** @odoo-module **/
 
-import { toJalali, jMonthName, createDiv} from "./jalali_service";
+import { parseDate } from "@web/core/l10n/dates";
+import { toJalali, jMonthName, createDiv } from "./jalali_service";
 
-function parseUSDate(dateStr) {
-    if (!dateStr) return null;
+const SUPPLIERINFO_SIGNATURE = ["partner_id", "min_qty", "price", "delay"];
 
-    const parts = dateStr.split("/");
-    if (parts.length !== 3) return null;
+function normalizeDigits(value) {
+    return value
+        .replace(/[\u06F0-\u06F9]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+        .replace(/[\u0660-\u0669]/g, (digit) => String(digit.charCodeAt(0) - 0x0660));
+}
 
-    const month = parseInt(parts[0], 10);
-    const day = parseInt(parts[1], 10);
-    const year = parseInt(parts[2], 10);
+function parseLocalizedDate(value) {
+    if (!value || typeof value !== "string") return null;
 
-    if (!month || !day || !year) return null;
+    try {
+        const parsed = parseDate(normalizeDigits(value.trim()));
+        return parsed && parsed.isValid ? parsed : null;
+    } catch {
+        return null;
+    }
+}
 
-    // Use UTC to avoid timezone shift
-    return new Date(Date.UTC(year, month - 1, day));
+function isSupplierInfoForm(form) {
+    return SUPPLIERINFO_SIGNATURE.every((field) => form.querySelector(`[name="${field}"]`));
 }
 
 function formatJalali(j) {
@@ -23,39 +31,38 @@ function formatJalali(j) {
     return `${j.jd} ${jMonthName(j.jm)} ${j.jy}`;
 }
 
-let jalaliUpdateTimer = null;
-
-function scheduleJalaliUpdate(modalEl) {
-    if (!modalEl) return;
-
-    clearTimeout(jalaliUpdateTimer);
-    jalaliUpdateTimer = setTimeout(() => {
-        updatePurchaseVendorPriceList(modalEl);
-    }, 100);
-}
-
-function updateJalaliAfterButton(modalEl, fieldId, className) {
+function updateJalaliAfterButton(modalEl, fieldName, className) {
     if (!modalEl) return;
 
     const btn =
-        modalEl.querySelector(`button#${fieldId}`) ||
-        modalEl.querySelector(`button[data-field="${fieldId.replace(/_\d+$/, "")}"]`);
+        modalEl.querySelector(`button[data-field="${fieldName}"]`) ||
+        modalEl.querySelector(`button#${fieldName}_0`);
 
-    if (!btn) return;
+    if (!btn) {
+        modalEl.querySelector(`.${className}`)?.remove();
+        return;
+    }
 
-    const val = btn.getAttribute("value") || btn.getAttribute("data-tooltip");
-    if (!val) return;
+    const value = btn.dataset.tooltip || btn.textContent;
+    const gDate = parseLocalizedDate(value);
+    const existing = btn.parentElement?.querySelector(`.${className}`);
 
-    const gDate = parseUSDate(val);
-    if (!gDate || isNaN(gDate.getTime())) return;
+    if (!gDate) {
+        existing?.remove();
+        return;
+    }
 
     const j = toJalali(gDate);
-    if (!j) return;
+    if (!j || typeof j !== "object") {
+        existing?.remove();
+        return;
+    }
 
     const jalaliText = formatJalali(j);
-    if (!jalaliText) return;
-
-    let existing = btn.parentElement?.querySelector(`.${className}`);
+    if (!jalaliText) {
+        existing?.remove();
+        return;
+    }
 
     if (existing) {
         const newText = `| ${jalaliText}`;
@@ -83,20 +90,8 @@ function updateJalaliAfterButton(modalEl, fieldId, className) {
  * Update Jalali date for vendor price list
  */
 export function updatePurchaseVendorPriceList(modalEl) {
-    if (!modalEl) return;
+    if (!modalEl || !isSupplierInfoForm(modalEl)) return;
 
-    // اگر قبلاً همین فرم پردازش شده و چیزی تغییر نکرده، دوباره اجرا نشود
-    // ولی چون ممکن است DOM دوباره ساخته شود، فقط وجود marker را چک می‌کنیم
-    const startBtn =
-        modalEl.querySelector('button#date_start_0') ||
-        modalEl.querySelector('button[data-field="date_start"]');
-
-    const endBtn =
-        modalEl.querySelector('button#date_end_0') ||
-        modalEl.querySelector('button[data-field="date_end"]');
-
-    if (!startBtn && !endBtn) return;
-
-    updateJalaliAfterButton(modalEl, "date_start_0", "jalali-date-start");
-    updateJalaliAfterButton(modalEl, "date_end_0", "jalali-date-end");
+    updateJalaliAfterButton(modalEl, "date_start", "jalali-date-start");
+    updateJalaliAfterButton(modalEl, "date_end", "jalali-date-end");
 }

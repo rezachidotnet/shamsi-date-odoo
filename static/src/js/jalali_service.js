@@ -7,8 +7,12 @@
 ------------------------*/
 export function toJalali(date) {
     if (!date) return "";
-    if (!window.jalali?.toJalaali) return `${date.getFullYear()}/${date.getMonth() + 1}/${date.getDate()}`;
-    const j = window.jalali.toJalaali(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    const year = typeof date.year === "number" ? date.year : date.getFullYear?.();
+    const month = typeof date.month === "number" ? date.month : date.getMonth?.() + 1;
+    const day = typeof date.day === "number" ? date.day : date.getDate?.();
+    if (!year || !month || !day) return "";
+    if (!window.jalali?.toJalaali) return `${year}/${month}/${day}`;
+    const j = window.jalali.toJalaali(year, month, day);
     return j;
 }
 
@@ -50,7 +54,6 @@ export function createDiv(className, text, style = {}) {
     Object.assign(el.style, style);
     return el;
 }
-
 
 
 
