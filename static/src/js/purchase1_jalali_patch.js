@@ -92,6 +92,14 @@ function updateJalaliAfterButton(modalEl, fieldName, className) {
 export function updatePurchaseVendorPriceList(modalEl) {
     if (!modalEl || !isSupplierInfoForm(modalEl)) return;
 
+    // D2 transition guard: once the native field widget is mounted, its
+    // structured companion owns both validity fields. Remove any legacy
+    // siblings left by an earlier observer pass and do not add duplicates.
+    if (modalEl.querySelector("[data-jalali-native-date-widget='1']")) {
+        modalEl.querySelectorAll(".jalali-date-start, .jalali-date-end").forEach((el) => el.remove());
+        return;
+    }
+
     updateJalaliAfterButton(modalEl, "date_start", "jalali-date-start");
     updateJalaliAfterButton(modalEl, "date_end", "jalali-date-end");
 }

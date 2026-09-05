@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="sale_shamsi_report.JalaliSecondaryDateField" t-inherit="web.DateTimeField" t-inherit-mode="extension" owl="1">
+        <xpath expr="//div[@t-ref='root']" position="inside">
+            <span
+                t-if="jalaliText"
+                class="o_jalali_secondary_date text-muted"
+                data-jalali-native-date-widget="1"
+                t-esc="jalaliText"
+            />
+        </xpath>
+    </t>
+</templates>

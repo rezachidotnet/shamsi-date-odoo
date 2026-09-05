@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="product_supplierinfo_form_jalali_date" model="ir.ui.view">
+        <field name="name">product.supplierinfo.form.jalali.date</field>
+        <field name="model">product.supplierinfo</field>
+        <field name="inherit_id" ref="product.product_supplierinfo_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form//field[@name='date_start']" position="attributes">
+                <attribute name="widget">jalali_secondary_date</attribute>
+            </xpath>
+            <xpath expr="//form//field[@name='date_end']" position="attributes">
+                <attribute name="widget">jalali_secondary_date</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

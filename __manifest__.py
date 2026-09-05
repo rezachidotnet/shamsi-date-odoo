@@ -20,6 +20,7 @@
         'views/sale_order_form_inherit.xml',
 
         'views/calendar_event_jalali.xml',
+        'static/src/js/product_supplierinfo_jalali.xml',
 
         # 'views/sale_order_report_override.xml'
 
@@ -49,6 +50,8 @@
         'sale_shamsi_report/static/src/css/calendar_jalali.css',
         'sale_shamsi_report/static/lib/jalaali-js.js',
         'sale_shamsi_report/static/src/js/jalali_service.js',
+        'sale_shamsi_report/static/src/js/jalali_secondary_date_field.js',
+        'sale_shamsi_report/static/src/js/jalali_secondary_date_field.xml',
 
         'sale_shamsi_report/static/src/js/calendar_jalali_patch.js',
         'sale_shamsi_report/static/src/js/discuss_jalali_patch.js',

@@ -45,6 +45,20 @@ test("vendor broad-root callback rejects a non-supplier page before writing", ()
     expect(root.querySelector(".jalali-date-start")).toBe(null);
 });
 
+test("vendor legacy callback yields to a mounted native companion", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `
+        <form>
+            <input name="partner_id"><input name="min_qty"><input name="price"><input name="delay">
+            <button data-field="date_start">03/20/2024</button>
+            <span class="jalali-date-start">| 1 فروردین 1403</span>
+            <span data-jalali-native-date-widget="1" class="o_jalali_secondary_date">| 1 فروردین 1403</span>
+        </form>`;
+    updatePurchaseVendorPriceList(root);
+    expect(root.querySelectorAll(".jalali-date-start")).toHaveCount(0);
+    expect(root.querySelectorAll(".o_jalali_secondary_date")).toHaveCount(1);
+});
+
 test("scheduling rewrites unchanged output and remains a self-mutation risk", async () => {
     const previous = window.jalali;
     window.jalali = { toJalaali: () => ({ jy: 1403, jm: 1, jd: 1 }) };
