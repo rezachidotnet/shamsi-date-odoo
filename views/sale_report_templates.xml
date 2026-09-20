@@ -71,7 +71,22 @@
         </xpath>
 
 
-        
+        <!-- L-02: mark this report's body so the multi-page pagination corrections in
+             static/src/css/report_fonts.css stay scoped to the sale order printout. -->
+        <xpath expr="//div[hasclass('page')]" position="attributes">
+            <attribute name="class" add="o_sipanel_so_print" separator=" "/>
+        </xpath>
+
+        <!-- L-02: repeat the line-table column headers on every page the table runs onto.
+             Odoo pins the header with an inline display:table-row-group and documents the
+             toggle right above it; keep that escape hatch only for pathologically tall
+             descriptions, the same guard account.report_invoice_document uses, because a
+             single row taller than one page plus a repeating header confuses wkhtmltopdf. -->
+        <xpath expr="//table[hasclass('o_main_table')]/thead" position="attributes">
+            <attribute name="style"/>
+            <attribute name="t-attf-style">#{"display: table-row-group;" if any((l.name or "").count("\n") &gt; 30 for l in doc.order_line) else ""}</attribute>
+        </xpath>
+
         <!-- اضافه کردن یک خط خالی قبل از جدول قیمت-->
         <xpath expr="//div[@id='informations']" position="before">
             <div style="height:20px;"></div>
@@ -127,7 +142,9 @@
             <!-- فاصله لازم برای بخش امضا -->
             <div style="height: 10px; clear: both;"></div>
             
-            <div class="row">
+            <!-- L-02: o_sipanel_signature_block keeps the caption, the salesperson name and
+                 the signature image on one page (see report_fonts.css). -->
+            <div class="row o_sipanel_signature_block">
                 <div class="col-5 offset-7 text-center">
                     
                     <!-- استفاده از کلاس‌های تعریف شده در فایل CSS -->

@@ -43,3 +43,51 @@ body, .page, .o_report_layout_bubble, .footer, .o_footer_content, .o_company_tag
     color: #000;
     margin-top: 10px;
 }
+
+/* ---------------------------------------------------------------------------
+ * L-02 — multi-page pagination of the sale order printout
+ *
+ * Odoo's bubble layout draws a report table's outer box with an absolutely
+ * positioned ::before overlay (top:0; left:0; bottom:0; right:0) inside a
+ * position:relative table:
+ *     .o_table_boxed-rounded table:not(.o_ignore_layout_styling)::before
+ * wkhtmltopdf 0.12.6 (QtWebKit) does not paginate that overlay together with
+ * the rows it covers. On a page where the table is broken it keeps painting
+ * the box over the empty tail left by the row that moved on, and clips it a
+ * fraction of a point past the printable bottom edge, so a long SIPANEL
+ * quotation shows a tall empty bordered rectangle running into the footer.
+ *
+ * Replacing the overlay with a real border on the table makes WebKit paginate
+ * the box with the rows. Scoped to .o_sipanel_so_print (added to div.page by
+ * views/sale_report_templates.xml) so every other report keeps stock styling.
+ * The rounded header corners come from thead th rules, not from the overlay,
+ * so the printed table still looks the same.
+ * ------------------------------------------------------------------------- */
+.o_sipanel_so_print table:not(.o_ignore_layout_styling)::before {
+    display: none !important;
+}
+
+.o_sipanel_so_print table.o_main_table:not(.o_ignore_layout_styling) {
+    border: 1px solid #495057 !important;
+}
+
+/* the totals box hangs under the line table, so it keeps its open top edge */
+.o_sipanel_so_print table.o_total_table:not(.o_ignore_layout_styling) {
+    border: 1px solid #495057 !important;
+    border-top: none !important;
+}
+
+/* Keep the signature caption, the salesperson name and the signature image
+ * together. page-break-inside: avoid must NOT be used here: in wkhtmltopdf
+ * 0.12.6 it makes the block overflow past the printable area instead of moving
+ * it to the next page (measured: 12 words pushed 20pt into the footer band).
+ * Laying the block out as a table makes WebKit move it as one unit instead. */
+.o_sipanel_so_print .o_sipanel_signature_block {
+    display: table !important;
+    width: 100% !important;
+}
+
+.o_sipanel_so_print .o_sipanel_signature_block > div {
+    display: table-cell !important;
+    float: none !important;
+}
