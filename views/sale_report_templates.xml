@@ -13,6 +13,7 @@
             <div class="custom-full-page-cover" style="
                 position: relative; 
                 height: 20cm; 
+                overflow: hidden; /* cover content must never spill past the page break onto page 2 */
                 width: 100%; 
                 background-color: white; 
                 z-index: 9999; 
@@ -32,7 +33,7 @@
                 <hr style="width: 75%; border-top: 3px solid #000; margin: 30px auto;"/>
 
                 <!-- ۳. محتوای وسط صفحه با فونت درشت -->
-                <div style="height: 100px;"></div>
+                <div style="height: 60px;"></div>
                 <div style="font-size: 26px; line-height: 2.2; color: #000;">
 
                     
@@ -51,7 +52,7 @@
                         <strong>Customer: </strong> <span t-field="doc.partner_id.name"/>
                     </div>
 
-                    <div style="height: 300px;"></div>
+                    <div style="height: 80px;"></div>
                     <div style="margin-top: 10px;">
                         <strong>Date: </strong> 
                         <t t-if="doc.partner_id and doc.partner_id.lang == 'fa_IR' and 'date_order_shamsi' in doc">

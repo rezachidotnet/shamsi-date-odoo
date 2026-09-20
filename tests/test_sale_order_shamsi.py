@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from freezegun import freeze_time
 from lxml import etree
@@ -167,6 +168,25 @@ class TestShamsiTemplateStructure(TransactionCase):
         for field_name in ("date_order_shamsi", "validity_date_shamsi", "commitment_date_shamsi"):
             self.assertTrue(document.xpath(f"//*[@t-esc='doc.{field_name}'] | //*[@t-field='doc.{field_name}']"))
         self.assertTrue(document.xpath("//t[@t-else]"))
+
+    def test_sale_report_cover_page_is_bounded(self):
+        """Regression (2026-09-20): the cover block is a fixed 20cm box with page-break-after; its content
+        (title, number, customer, date) must stay inside that box, otherwise the large date line spills past
+        the page break and overlaps the document-information block at the top of page 2."""
+        document = self._parse("views/sale_report_templates.xml")
+        cover = document.xpath("//div[contains(@class, 'custom-full-page-cover')]")
+        self.assertEqual(len(cover), 1)
+        style = " ".join(cover[0].get("style").split())
+        self.assertIn("height: 20cm;", style)
+        self.assertIn("overflow: hidden;", style)
+        self.assertIn("page-break-after: always;", style)
+        markup = etree.tostring(cover[0], encoding="unicode")
+        spacers = [int(px) for px in re.findall(r'style="height: (\d+)px;"', markup)]
+        self.assertTrue(spacers)
+        self.assertLessEqual(max(spacers), 100, "a single spacer must not push the cover date out of the 20cm box")
+        self.assertLessEqual(sum(spacers), 320, "total spacer height must leave room for the cover text inside 20cm")
+        # the document date is rendered exactly once on the cover; page 2 keeps the native informations block
+        self.assertEqual(len(cover[0].xpath(".//*[@t-field='doc.date_order_shamsi']")), 1)
 
     def test_sale_portal_template_language_branches(self):
         document = self._parse("views/sale_portal_templates.xml")
