@@ -21,6 +21,14 @@ class TestDiscussJalaliPatch(TransactionCase):
         self.assertGreaterEqual(source.count('dataset.jalaliPatched'), 4)
         self.assertIn('el.insertAdjacentElement("afterend", div);', source)
 
+    def test_message_date_companion_is_dedup_source_of_truth(self):
+        source = self._source()
+        # OWL can recreate the source node without the marker, so the marker
+        # must not short-circuit message-date processing.
+        self.assertNotIn('if (el.dataset.jalaliPatched) return;', source)
+        self.assertIn('el.nextElementSibling', source)
+        self.assertIn('classList.contains("jalali-message-date")', source)
+
     def test_invalid_and_empty_values_return_without_injection(self):
         source = self._source()
         self.assertIn('if (!gDateText) return;', source)

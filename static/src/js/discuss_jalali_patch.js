@@ -31,11 +31,10 @@ function updateMessageDate(el) {
 
     if (!el) return;
 
-    // Prevent duplicate patching across repeated observer passes. Only mark
-    // the element after a valid conversion, so a later render can recover
-    // from a temporarily empty or invalid title.
-    if (el.dataset.jalaliPatched) return;
-
+    // Do not rely on data-jalali-patched to skip work: OWL may recreate the
+    // source node on hover/rerender (dropping the marker) while the previously
+    // inserted companion stays in the DOM. The companion sibling itself is the
+    // source of truth, so this function is idempotent.
     const title = el.getAttribute("title");
     if (!title) return;
 
@@ -47,19 +46,36 @@ function updateMessageDate(el) {
 
     // Use Persian month name
     const jalaliText = `${jMonthName(j.jm)} ${j.jd} `;
+    const text = `| ${jalaliText}`;
 
-    const div = createDiv(
-        "jalali-message-date",
-        `| ${jalaliText}`,
-        {
-            fontSize: "11px",
-            color: "#888",
-            marginLeft: "4px"
+    let div = el.nextElementSibling;
+    if (div?.classList.contains("jalali-message-date")) {
+        // Collapse consecutive duplicates left behind by earlier renders.
+        let extra = div.nextElementSibling;
+        while (extra?.classList.contains("jalali-message-date")) {
+            const next = extra.nextElementSibling;
+            extra.remove();
+            extra = next;
         }
-    );
-
-    el.insertAdjacentElement("afterend", div);
-    el.dataset.jalaliPatched = "1";
+        if (div.textContent !== text) {
+            div.textContent = text;
+        }
+    } else {
+        div = createDiv(
+            "jalali-message-date",
+            text,
+            {
+                fontSize: "11px",
+                color: "#888",
+                marginLeft: "4px"
+            }
+        );
+        el.insertAdjacentElement("afterend", div);
+    }
+    // Metadata only; correctness never depends on this marker.
+    if (!el.dataset.jalaliPatched) {
+        el.dataset.jalaliPatched = "1";
+    }
 }
 
 

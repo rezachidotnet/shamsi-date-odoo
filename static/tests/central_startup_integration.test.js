@@ -5,23 +5,83 @@ import { updateAllMailDates } from "@sale_shamsi_report/js/discuss_jalali_patch"
 import { updatePurchaseVendorPriceList } from "@sale_shamsi_report/js/purchase1_jalali_patch";
 import { updateMassMailingScheduleDate } from "@sale_shamsi_report/js/smsmarketing_jalali_patch";
 
-test("KNOWN_CENTRAL_BUG_MAIL_STALE_MARKER: marked reused mail source stays stale", () => {
+function withFakeJalali(callback) {
     const previous = window.jalali;
     window.jalali = { toJalaali: (year) => ({ jy: year - 621, jm: 1, jd: 1 }) };
+    try {
+        callback();
+    } finally {
+        window.jalali = previous;
+    }
+}
+
+test("mail date: repeated execution keeps one Jalali companion", () => {
+    withFakeJalali(() => {
+        const root = document.createElement("div");
+        root.innerHTML = '<span class="o-mail-Message-date" title="2024-03-20T10:00:00Z">10:00</span>';
+        updateAllMailDates(root);
+        updateAllMailDates(root);
+        expect(root.querySelectorAll(".jalali-message-date")).toHaveCount(1);
+        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 1 ");
+        expect(root.querySelector(".o-mail-Message-date").textContent).toBe("10:00");
+    });
+});
+
+test("mail date: OWL-like source replacement reuses the existing companion", () => {
+    withFakeJalali(() => {
+        const root = document.createElement("div");
+        root.innerHTML = '<span class="o-mail-Message-date" title="2024-03-20T10:00:00Z">10:00</span>';
+        updateAllMailDates(root);
+        expect(root.querySelectorAll(".jalali-message-date")).toHaveCount(1);
+        const fresh = document.createElement("span");
+        fresh.className = "o-mail-Message-date";
+        fresh.title = "2024-03-20T10:00:00Z";
+        fresh.textContent = "10:00";
+        root.querySelector(".o-mail-Message-date").replaceWith(fresh);
+        expect(fresh.dataset.jalaliPatched).toBe(undefined);
+        updateAllMailDates(root);
+        expect(root.querySelectorAll(".jalali-message-date")).toHaveCount(1);
+        expect(fresh.nextElementSibling.classList.contains("jalali-message-date")).toBe(true);
+        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 1 ");
+        expect(fresh.textContent).toBe("10:00");
+        expect(fresh.title).toBe("2024-03-20T10:00:00Z");
+    });
+});
+
+test("mail date: reused source with changed title updates the companion", () => {
+    const previous = window.jalali;
+    // Day tracks the Gregorian year so a stale companion is detectable.
+    window.jalali = { toJalaali: (year) => ({ jy: year - 621, jm: 1, jd: year - 2020 }) };
     const root = document.createElement("div");
     root.innerHTML = '<span class="o-mail-Message-date" title="2024-03-20T10:00:00Z"></span>';
     const date = root.querySelector(".o-mail-Message-date");
     try {
         updateAllMailDates(root);
-        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 1 ");
+        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 4 ");
         date.title = "2025-03-20T10:00:00Z";
         updateAllMailDates(root);
-        expect(root.querySelectorAll(".jalali-message-date").length).toBe(1);
-        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 1 ");
-        expect(date.dataset.jalaliPatched).toBe("1");
+        expect(root.querySelectorAll(".jalali-message-date")).toHaveCount(1);
+        expect(root.querySelector(".jalali-message-date").textContent).toBe("| فروردین 5 ");
     } finally {
         window.jalali = previous;
     }
+});
+
+test("mail date: pre-existing consecutive duplicates collapse to one", () => {
+    withFakeJalali(() => {
+        const root = document.createElement("div");
+        root.innerHTML = `<span class="o-mail-Message-date" title="2024-03-20T10:00:00Z"></span>`
+            + `<div class="jalali-message-date">| stale </div>`
+            + `<div class="jalali-message-date">| stale </div>`
+            + `<div class="jalali-message-date">| stale </div>`
+            + `<span class="o-mail-Message-date" title="2024-03-20T10:00:00Z"></span>`
+            + `<div class="jalali-message-date">| فروردین 1 </div>`;
+        updateAllMailDates(root);
+        expect(root.querySelectorAll(".jalali-message-date")).toHaveCount(2);
+        for (const source of root.querySelectorAll(".o-mail-Message-date")) {
+            expect(source.nextElementSibling.textContent).toBe("| فروردین 1 ");
+        }
+    });
 });
 
 test("calendar update-or-create is repeat-safe", () => {
